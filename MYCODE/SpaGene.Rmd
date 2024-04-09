@@ -73,7 +73,13 @@ human_LR <- read.table(paste0(path, "Data/human_lr_pair.txt"), header = TRUE, se
 head(human_LR)
 ```
 
+```{r}
+data_lr <- SpaGene_LR(counts, coords, LRpair = human_LR) 
+```
 
+```{r}
+head(data_lr[order(data_lr$adj),])
+```
 
 
 
