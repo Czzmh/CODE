@@ -18,8 +18,10 @@ library(ggplot2)
 ```
 
 ```{r}
+path <- "D:/Desktop/MGI/CODE/"
+
 # Data
-data <- LoadH5Seurat("Data/SS200000116BR_E6.bin200.h5seurat")
+data <- LoadH5Seurat(paste0(path, "Data/SS200000116BR_E6.bin200.h5seurat"))
 head(data@meta.data, 5)
 ```
 
@@ -60,24 +62,12 @@ hist(log(puck@nUMI,2))
 
 ```{r}
 # load reference (class: SummarizedExperiment)
-ref <- readRDS("Data/5patients_nG3000_PC30_Res0.4_Celltype.rds")
+ref <- readRDS(paste0(path, "Data/5patients_nG3000_PC30_Res0.4_Celltype.rds"))
 ```
 
 ```{r}
 metadata_ref <- ref@meta.data
 metadata_ref
-```
-
-```{r}
-clear <- function(row) {
-      t <- row['celltype.singResource']
-      return(gsub("/", "-", t))
-    }
-celltypes <- apply(metadata_ref, 1, clear)
-
-names(celltypes) <- colnames(ref[["RNA"]]@counts)
-celltypes <- as.factor(celltypes)
-celltypes
 ```
 
 ```{r}
@@ -96,6 +86,7 @@ print(head(colnames(counts_ref)))
 print(head(rownames(counts_ref)))
 print(head(counts_ref))
 ```
+
 ```{r}
 # cell type: A named (by cell barcode) factor of cell type for each cell.
 
@@ -163,7 +154,7 @@ saveRDS(RCTD, file = "RData/RCTD.rds")
 ```
 
 ```{r}
-RCTD <- readRDS("RData/RCTD.rds")
+RCTD <- readRDS(paste0(path,"RData/RCTD.rds"))
 ```
 
 ```{r}
@@ -174,7 +165,7 @@ spatialRNA <- RCTD@spatialRNA
 ```
 
 ```{r}
-RCTD_result_dir <- 'Figure/RCTD'
+RCTD_result_dir <- paste0(path, 'Figure/RCTD')
 dir.create(RCTD_result_dir)
 ```
 
@@ -291,6 +282,6 @@ print(plot_final_type)
 ```
 
 ```{r}
-write.csv(res, "Output/RCTD_results.csv")
+write.csv(res, paste0(path, "Output/RCTD_results.csv"))
 ```
 
