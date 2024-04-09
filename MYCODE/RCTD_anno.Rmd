@@ -1,0 +1,296 @@
+---
+title: "RCTD_anno"
+author: "Jin Huhao"
+date: "2024-04-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+# libraries
+library(SeuratDisk)
+library(Seurat)
+library(spacexr)
+library(Matrix)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+# Data
+data <- LoadH5Seurat("Data/SS200000116BR_E6.bin200.h5seurat")
+head(data@meta.data, 5)
+```
+
+```{r}
+# coords: A dataframe or matrix. 
+# Rownames are barcodes/pixel names, and there should be 2 columns for x and y.
+coords <- data@meta.data %>% select(x, y)
+coords
+```
+
+
+```{r}
+# counts: A matrix or dgCmatrix representing Digital Gene Expression.
+# Rownames should be genes and colnames represent barcodes/pixel names.
+counts = GetAssayData(data)
+print(head(colnames(counts)))
+print(head(rownames(counts)))
+print(head(counts))
+```
+```{r}
+# nUMI (optional)
+# a named (by pixel barcode) list of total counts at each pixel 
+nUMI <- colSums(counts)
+head(nUMI) # In this case, total counts per pixel is nUMI
+```
+
+```{r}
+# SpatialRNA: constructor of SpatialRNA object
+# SpatialRNA(coords, counts, nUMI = NULL, use_fake_coords = FALSE, require_int = TRUE)
+puck <- SpatialRNA(coords, counts, nUMI)
+puck
+```
+
+```{r}
+print(dim(puck@counts))
+hist(log(puck@nUMI,2))
+```
+
+```{r}
+# load reference (class: SummarizedExperiment)
+ref <- readRDS("Data/5patients_nG3000_PC30_Res0.4_Celltype.rds")
+```
+
+```{r}
+metadata_ref <- ref@meta.data
+metadata_ref
+```
+
+```{r}
+clear <- function(row) {
+      t <- row['celltype.singResource']
+      return(gsub("/", "-", t))
+    }
+celltypes <- apply(metadata_ref, 1, clear)
+
+names(celltypes) <- colnames(ref[["RNA"]]@counts)
+celltypes <- as.factor(celltypes)
+celltypes
+```
+
+```{r}
+cell_types <- metadata_ref %>% select(celltype.singResource)
+cell_types
+
+names <- rownames(cell_types)
+head(names,5)
+```
+
+```{r}
+# counts: A matrix or dgCmatrix representing Digital Gene Expression.
+# Rownames should be genes and colnames represent barcodes/cell names.
+counts_ref <-  ref[["RNA"]]@counts
+print(head(colnames(counts_ref)))
+print(head(rownames(counts_ref)))
+print(head(counts_ref))
+```
+```{r}
+# cell type: A named (by cell barcode) factor of cell type for each cell.
+
+# level: the "level" of the factor would be the possible cell type identities.
+
+# levels(cell_types) contains a cell type 
+# with name containing prohibited character /.
+# There are T/NK and Tumor/Cholang contains "/"
+
+cell_types$celltype.singResource <- gsub("/", "-", cell_types$celltype.singResource)
+
+levels <- unique(cell_types$celltype.singResource)
+
+cell_types_ref <- factor(cell_types$celltype.singResource, levels = levels)
+names(cell_types_ref) <- names
+
+head(cell_types_ref, 20)
+```
+
+
+```{r}
+# nUMI (optional)
+# a named (by cell barcode) list of total counts at each pixel 
+
+nUMI_ref <- colSums(counts_ref)
+head(nUMI_ref)
+```
+
+```{r}
+# Reference: constructor of Reference object.
+# Reference(counts, cell_types, nUMI = NULL, require_int = TRUE, n_max_cells = 10000, min_UMI = 100)
+reference <- Reference(counts_ref, cell_types_ref, nUMI_ref)
+```
+So far, the Reference and SpatialRNA object are successfully constructed!
+
+Next, Create RCTD object and run RCTD
+
+```{r}
+# create RCTD
+RCTD <- create.RCTD(spatialRNA = puck, reference = reference, max_cores = 1)
+```
+
+```{r}
+# run RCTD
+RCTD <- run.RCTD(RCTD = RCTD, doublet_mode = "doublet")
+```
+Get the results of RCTD
+
+RCTD has 3 modes:
+
+1. doublet mode:
+assign 1-2 cell types per spot
+recommended for technologies with high spatial resolution
+
+2. full mode:
+assign any number of cell types per spot
+recommended for technologies with poor spatial resolution
+
+3. multi mode:
+an extension of doublet model, can discover more than 2 cell types per spot 
+as an alternative option to full model 
+
+```{r}
+saveRDS(RCTD, file = "RData/RCTD.rds")
+```
+
+```{r}
+RCTD <- readRDS("RData/RCTD.rds")
+```
+
+```{r}
+results <- RCTD@results
+norm_weights = normalize_weights(results$weights) 
+cell_type_names <- RCTD@cell_type_info$info[[2]] #list of cell type names
+spatialRNA <- RCTD@spatialRNA
+```
+
+```{r}
+RCTD_result_dir <- 'Figure/RCTD'
+dir.create(RCTD_result_dir)
+```
+
+```{r}
+# make the plots 
+
+# cell_type_weights_unthreshold.pdf
+# Plots the confident weights for each cell type as in full_mode
+plot_weights(cell_type_names, spatialRNA, RCTD_result_dir, norm_weights) 
+
+# cell_type_weights.pdf
+# Plots all weights for each cell type as in full_mode. 
+plot_weights_unthreshold(cell_type_names, spatialRNA, RCTD_result_dir, norm_weights) 
+
+# cell_type_weights_doublets.pdf
+# Plots the weights for each cell type as in doublet_mode.
+plot_weights_doublet(cell_type_names, spatialRNA, RCTD_result_dir, 
+                     results$weights_doublet, results$results_df) 
+
+# cell_type_occur.pdf
+# Plots the number of confident pixels of each cell type in 'full_mode'. 
+plot_cond_occur(cell_type_names, RCTD_result_dir, norm_weights, spatialRNA)
+```
+
+```{r}
+# all_cell_types.pdf
+# makes a map of all cell types
+plot_all_cell_types(results$results_df, spatialRNA@coords, cell_type_names, RCTD_result_dir) 
+```
+
+```{r}
+# doublets
+# obtain a dataframe of only doublets
+doublets <- results$results_df[results$results_df$spot_class == "doublet_certain",] 
+
+# all_doublets.pdf
+# Plots all doublets in space
+plot_doublets(spatialRNA, doublets, RCTD_result_dir, cell_type_names) 
+```
+
+```{r}
+# all_doublets_type.pdf
+# Plots all doublets in space for each cell type
+plot_doublets_type(spatialRNA, doublets, RCTD_result_dir, cell_type_names) 
+# a table of frequency of doublet pairs 
+doub_occur <- table(doublets$second_type, doublets$first_type) 
+
+# doublet_stacked_bar.pdf
+# Plots a stacked bar plot of doublet ocurrences
+plot_doub_occur_stack(doub_occur, RCTD_result_dir, cell_type_names) 
+```
+```{r}
+# the probabilities of being first type and second type
+probs <- results$weights_doublet
+colnames(probs) <- c("first_prob", "second_prob")
+head(probs)
+```
+```{r}
+# contains first_type, second_type, first_prob, second_prob and spot_class
+# spot_class
+res <- cbind(results$results_df %>% select(spot_class, first_type, second_type), probs)
+head(res)
+```
+
+```{r}
+res$final_type <- ifelse(res$first_prob > res$second_prob, as.character(res$first_type), as.character(res$second_type))
+head(res)
+```
+
+```{r}
+# the proportion of first_prod > second_prob
+sum(res$first_prob > res$second_prob)/nrow(res)
+
+sum(res$first_type == res$second_type)
+```
+
+
+```{r}
+coords <- spatialRNA@coords
+print(head(coords))
+
+print(dim(res)[1])
+print(dim(coords)[1])
+```
+
+```{r}
+res$x <- coords$x
+res$y <- coords$y
+head(res)
+```
+
+```{r}
+plot_first_type <- 
+  ggplot(res, aes(x = x, y = y, color = factor(first_type)))+
+  geom_point() +
+  theme_minimal()
+print(plot_first_type)
+```
+
+```{r}
+plot_second_type <- 
+  ggplot(res, aes(x = x, y = y, color = factor(second_type)))+
+  geom_point() +
+  theme_minimal()
+print(plot_second_type)
+```
+
+```{r}
+plot_final_type <- 
+  ggplot(res, aes(x = x, y = y, color = factor(final_type)))+
+  geom_point() +
+  theme_minimal()
+print(plot_final_type)
+```
+
+```{r}
+write.csv(res, "Output/RCTD_results.csv")
+```
+

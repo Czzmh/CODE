@@ -1,0 +1,311 @@
+---
+title: "SingleR_annotation"
+author: "Jin Huhao"
+date: "2024-04-02"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+### libraries
+library(Seurat)
+library(dplyr)
+library(patchwork)
+library(ggplot2)
+library(SeuratDisk)
+library(SingleR)
+library(celldex)
+library(pheatmap)
+library(SummarizedExperiment)
+library(scater)
+```
+
+```{r}
+# Data
+data <- LoadH5Seurat("Data/SS200000116BR_E6.bin200.h5seurat")
+# data is already Seurat object
+head(data@meta.data, 5)
+```
+```{r pressure, echo=FALSE}
+nCount_RNA <-  colSums(GetAssayData(data)) # 计算每个细胞的RNA读数计数
+nFeature_RNA <-  colSums(GetAssayData(data) > 0) # 计算每个细胞检测到的唯一基因数
+data@meta.data$nCount_RNA <- nCount_RNA
+data@meta.data$nFeature_RNA <- nFeature_RNA
+head(data@meta.data, 5)
+```
+
+```{r}
+# MT
+data[["percent.mt"]] <- PercentageFeatureSet(data, pattern = "^MT-")
+head(data@meta.data, 5) 
+```
+
+```{r}
+# save data
+saveRDS(data, "RData/E6_bin200.rds")
+```
+
+```{r}
+# load data
+data <- readRDS("RData/E6_bin200.rds")
+```
+
+```{r}
+VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+```
+
+```{r}
+# filter (based on the previous Vlnplot)
+data <- subset(data, subset = nFeature_RNA >= 2500 & nFeature_RNA <= 10000 & percent.mt <= 7 & percent.mt >= 2)
+VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+```
+
+```{r}
+# Normalize
+data <- NormalizeData(data, normalization.method = "LogNormalize", scale.factor = 10000)
+```
+
+```{r}
+# 识别高变基因
+data <- FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000)
+
+# Identify the 10 most highly variable genes 
+top10 <- head(VariableFeatures(data), 10)
+top10
+```
+
+```{r}
+# plot variable features with and without labels
+plot1 <- VariableFeaturePlot(data)
+plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
+plot1
+plot2
+```
+```{r}
+# scale
+all.genes <- rownames(data)
+data <- ScaleData(data)
+```
+
+```{r}
+# Perform linear dimensional reduction
+data <- RunPCA(data, features = VariableFeatures(object = data))
+
+# Examine and visualize PCA results a few different ways
+print(data[["pca"]], dims = 1:5, nfeatures = 5)
+```
+
+```{r}
+VizDimLoadings(data, dims = 1:2, reduction = "pca")
+```
+```{r}
+DimPlot(data, reduction = "pca") + NoLegend()
+```
+
+```{r}
+DimHeatmap(data, dims = 1, cells = 500, balanced = TRUE)
+DimHeatmap(data, dims = 1:15, cells = 500, balanced = TRUE)
+```
+
+```{r}
+# Elbow
+# In this example, we might have been justified in choosing anything between PC 3-6 as a cutoff.
+ElbowPlot(data)
+```
+```{r}
+data <- FindNeighbors(data, dims = 1:10)
+data <- FindClusters(data, resolution = 0.5)
+head(Idents(data), 5)
+```
+```{r}
+# UMAP based on the cluster results
+data <- RunUMAP(data, dims = 1:10)
+```
+
+```{r}
+# note that you can set `label = TRUE` or use the LabelClusters function 
+# to help label individual clusters
+DimPlot(data, reduction = "umap")
+
+VlnPlot(data, features = c("AL391095.2", "IGHM"))
+```
+```{r}
+### Save R data
+saveRDS(data, file = "RData/E6_bin200_seurat_result.rds")
+```
+
+Using SingleR to annotate cell type
+
+```{r}
+# reference annotation data
+load("Data/HumanPrimaryCellAtlas_hpca.se_human.RData")
+load("Data/BlueprintEncode_bpe.se_human.RData")
+```
+
+```{r}
+data <- readRDS("RData/E6_bin200_seurat_result.rds")
+data
+```
+
+```{r}
+meta <- data@meta.data
+head(meta)
+
+write.csv(meta, "Output/seurat_cluster.csv")
+```
+
+```{r}
+# UMAP
+DimPlot(data, reduction = "umap", label = TRUE)
+```
+```{r}
+# hpca: Human Primary Cell Atlas
+data_for_SingleR <- GetAssayData(data, slot="data")
+data.hesc <- SingleR(test = data_for_SingleR, ref = hpca.se, labels = hpca.se$label.main) #
+data.hesc
+```
+
+```{r}
+# table of seurat and singleR
+table(data.hesc$labels,meta$seurat_clusters)
+```
+```{r}
+# plot UMAP
+data@meta.data$labels <- data.hesc$labels
+DimPlot(data, group.by = c('seurat_clusters', 'labels'), reduction = 'umap')
+```
+The effect of annotation seems not good.
+
+```{r}
+data_1 <- data
+data_1.hesc <- SingleR(test = data_for_SingleR, ref = list(BP = bpe.se, HPCA = hpca.se),
+                       labels = list(bpe.se$label.main, hpca.se$label.main))
+table(data_1.hesc$labels, meta$seurat_clusters)
+```
+```{r}
+data_1@meta.data$lables <- data_1.hesc$labels
+DimPlot(data_1, group.by = c('seurat_clusters', 'labels'), reduction = 'umap')
+```
+
+```{r}
+### Annotation diagnosis
+plotScoreHeatmap(data.hesc)
+```
+
+```{r}
+# Plot the distribution of deltas 
+# (i.e., the gap between the assignment score for the assigned label 
+# and those of the remaining labels) across cells assigned to each reference label.
+plotDeltaDistribution(data.hesc, ncol = 3)
+```
+
+```{r}
+# compare with cluster results
+tab <- table(label = data.hesc$labels,
+             cluster = meta$seurat_clusters)
+pheatmap(log10(tab + 10))
+```
+
+```{r}
+data <- readRDS("RData/E6_bin200_seurat_result.rds")
+data
+meta <- data@meta.data
+meta
+```
+
+
+```{r} 
+ref = readRDS("Data/5patients_nG3000_PC30_Res0.4_Celltype.rds")
+ref
+```
+
+```{r}
+cell_type <- ref@meta.data %>% select(celltype.singResource)
+cell_type
+```
+
+```{r}
+ref.se <- SummarizedExperiment(assays=list(counts=ref[['RNA']]@counts), colData = cell_type) %>% logNormCounts()
+ref.se
+```
+```{r}
+saveRDS(ref.se, file = "RData/ref_se.rds")
+```
+
+```{r}
+data_for_SingleR <- GetAssayData(data, slot="data")
+```
+
+```{r}
+data.hesc <- SingleR(test = data_for_SingleR, ref = ref.se, labels = ref.se$celltype.singResource)
+```
+
+```{r}
+data.hesc
+```
+```{r}
+table(data.hesc$labels,meta$seurat_clusters)
+```
+
+```{r}
+data@meta.data$labels <- data.hesc$labels
+DimPlot(data, group.by = c('seurat_clusters', 'labels'), reduction = 'umap')
+DimPlot(data, reduction = "umap", label = TRUE)
+DimPlot(data, group.by = 'labels', reduction = 'umap')
+```
+
+```{r}
+output_path = 'Output/'
+write.csv(data.hesc, paste(output_path, 'SingleR_results.csv', sep = ""))
+```
+
+```{r}
+### Annotation diagnosis
+plotScoreHeatmap(data.hesc)
+```
+Ideally, each column of the heatmap should have one score that is obviously larger than the rest, indicating that it is unambiguously assigned to a single label.
+
+```{r}
+# Plot the distribution of deltas 
+# (i.e., the gap between the assignment score for the assigned label 
+# and those of the remaining labels) across cells assigned to each reference label.
+plotDeltaDistribution(data.hesc, ncol = 3)
+```
+
+```{r}
+# compare with cluster results
+tab <- table(label = data.hesc$labels,
+             cluster = meta$seurat_clusters)
+pheatmap(log10(tab + 10))
+
+```
+SingleR在本地运行的结果与在与平台上运行的结果不同
+
+自动注释的软件对于我们的研究工作能够起到一定的先导意义，不过这种先导意义一定是建立在对分析过程的理解之上的
+
+```{r}
+pruned.labels <- data.hesc$pruned.labels
+length(pruned.labels)
+```
+
+```{r}
+data@meta.data$pruned.labels <- pruned.labels
+data
+```
+
+```{r}
+
+
+plot <- 
+  ggplot(data@meta.data, aes(x = x, y = y, color = factor(pruned.labels)))+
+  geom_point() +
+  theme_minimal()
+print(plot)
+
+```
+
+cell type with their spatial location (with to find some patterns in Tumor)
+
+the results in Cloud in much better (do not know why)
+

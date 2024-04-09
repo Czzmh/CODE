@@ -1,0 +1,81 @@
+---
+title: "SpaGene"
+author: "Jin Huhao"
+date: "2024-04-09"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(Seurat)
+library(spacexr)
+library(Matrix)
+library(dplyr)
+library(ggplot2)
+library(SpaGene)
+library(pheatmap)
+```
+
+```{r}
+path <- "D:/Desktop/MGI/CODE/"
+
+# Data
+data <- LoadH5Seurat(paste0(path, "Data/SS200000116BR_E6.bin200.h5seurat"))
+head(data@meta.data, 5)
+```
+```{r}
+coords <- data@meta.data %>% select(x, y)
+coords
+```
+```{r}
+counts = GetAssayData(data)
+counts
+```
+```{r}
+# Identify spatial variable genes based on spatial connectness of spots with high expression
+
+# expr: gene expression matrix, the row is the gene and the column is the spot/cell
+# location: location matrix, the row number of location should match the column number of expr
+# normalize: default True
+
+spa_gene <- SpaGene(expr = counts, location = coords)
+```
+
+```{r}
+head(spa_gene$spagene_res[order(spa_gene$spagene_res$adjp),])
+```
+
+```{r}
+pattern<-FindPattern(spa_gene)
+```
+```{r}
+pattern_plots <- PlotPattern(pattern, coords)
+```
+
+```{r}
+pattern_plots
+```
+
+
+```{r}
+pattern_plots[[1]]
+```
+
+```{r}
+top5<-apply(pattern$genepattern,2,function(x){names(x)[order(x,decreasing=T)][1:5]})
+
+pheatmap(pattern$genepattern[rownames(pattern$genepattern)%in%top5,])
+```
+
+
+
+
+
+
+
+
+
+
+
+
