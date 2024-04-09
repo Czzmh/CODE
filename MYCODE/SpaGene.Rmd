@@ -68,6 +68,10 @@ top5<-apply(pattern$genepattern,2,function(x){names(x)[order(x,decreasing=T)][1:
 pheatmap(pattern$genepattern[rownames(pattern$genepattern)%in%top5,])
 ```
 
+```{r}
+human_LR <- read.table(paste0(path, "Data/human_lr_pair.txt"), header = TRUE, sep = "\t")
+head(human_LR)
+```
 
 
 
