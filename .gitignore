@@ -7,69 +7,10 @@
 .RDataTmp4
 .Rhistory
 allen_cortex.rds
-Output/kernel_diagnostic.png
-Output/RCTD_results.csv
-Output/seurat_cluster.csv
-Output/SingleR_results_cloud.csv
-Output/SingleR_results.csv
-Figure/VlnPlot1.png
-Figure/RCTD/all_cell_types.pdf
-Figure/RCTD/all_doublets_type.pdf
-Figure/RCTD/all_doublets.pdf
-Figure/RCTD/cell_type_occur.pdf
-Figure/RCTD/cell_type_weights_doublets.pdf
-Figure/RCTD/cell_type_weights_unthreshold.pdf
-Figure/RCTD/cell_type_weights.pdf
-Figure/RCTD/doublet_stacked_bar.pdf
-Workflow/1. Preprocessing/convert_seurat.py
-Workflow/1. Preprocessing/QC_check.R
-Workflow/2. Cell_type_annotation/batch_test.R
-Workflow/2. Cell_type_annotation/draw_annotation.R
-Workflow/2. Cell_type_annotation/infercnv-step01.R
-Workflow/2. Cell_type_annotation/infercnv-step02.R
-Workflow/2. Cell_type_annotation/marker_check.R
-Workflow/2. Cell_type_annotation/RCTD.R
-Workflow/2. Cell_type_annotation/re_annotation.R
-Workflow/2. Cell_type_annotation/seurat_annotation.R
-Workflow/3. Spatial/bde.test.png
-Workflow/3. Spatial/bivariate_I.py
-Workflow/3. Spatial/border_de.R
-Workflow/3. Spatial/border_generation.py
-Workflow/3. Spatial/correlation.R
-Workflow/3. Spatial/HBV_border.R
-Workflow/3. Spatial/HBV-spatial.R
-Workflow/3. Spatial/Rplots.pdf
-Workflow/3. Spatial/seg-m.py
-Workflow/3. Spatial/test.py
-Workflow/3. Spatial/utli.py
-CODE_integrated/Batch_annotation.R
-CODE_integrated/bin_analysis.R
-CODE_integrated/bind_celltype.R
-CODE_integrated/border_analysis.py
-CODE_integrated/gene_scatter.R
-CODE_integrated/graph_trial.py
-CODE_integrated/Graph.py
-CODE_integrated/inferCNV.R
-CODE_integrated/Loading.R
-CODE_integrated/RCTD_src.R
-CODE_integrated/Rspatial.R
-CODE_integrated/spatialde.py
-CODE_integrated/SpatialGeneAnalysis.R
+Output
+Figure
+Workflow
+CODE_integrated
 .vscode/launch.json
-Data/5patients_nG3000_PC30_Res0.4_Celltype.rds
-Data/BlueprintEncode_bpe.se_human.RData
-Data/human_lr_pair.txt
-Data/HumanPrimaryCellAtlas_hpca.se_human.RData
-Data/pbmc3k_filtered_gene_bc_matrices.tar.gz
-Data/SS200000116BR_E1.bin50.h5seurat
-Data/SS200000116BR_E6.bin200.h5ad
-Data/SS200000116BR_E6.bin200.h5seurat
-Data/filtered_gene_bc_matrices/hg19/barcodes.tsv
-Data/filtered_gene_bc_matrices/hg19/genes.tsv
-Data/filtered_gene_bc_matrices/hg19/matrix.mtx
-RData/E1_bin50.rds
-RData/E6_bin200_seurat_result.rds
-RData/E6_bin200.rds
-RData/pbmc_tutorial.rds
-RData/RCTD.rds
-RData/ref_se.rds
+RData
+Data
