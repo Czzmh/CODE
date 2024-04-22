@@ -1,0 +1,154 @@
+---
+title: "SpatialDE"
+author: "Jin Huhao"
+date: "2024-04-18"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(Seurat)
+library(SeuratDisk)
+library(spatialDE)
+library(ggplot2)
+library(SpatialExperiment)
+library(dplyr)
+```
+
+```{r}
+path <- "D:/Desktop/MGI/CODE/"
+
+# Data
+data <- LoadH5Seurat(paste0(path, "Data/SS200000116BR_E6.bin200.h5seurat"))
+head(data@meta.data, 5)
+```
+
+```{r}
+coords <- data@meta.data %>% select(x, y)
+coords
+```
+
+```{r}
+counts = GetAssayData(data)
+counts
+```
+
+```{r}
+counts_matrix <- as.matrix(counts)
+counts_matrix[1:5, 1:5]
+```
+
+```{r}
+sample_info <- coords
+sample_info$total_counts <- colSums(counts_matrix)
+sample_info
+```
+
+```{r}
+# pre-processing
+# 过滤低于500个基因的细胞
+counts_matrix <- counts_matrix[rowSums(counts_matrix > 0) >= 500, ]
+
+# 过滤高于10000个基因的细胞
+counts_matrix <- counts_matrix[rowSums(counts_matrix > 0) <= 10000, ]
+
+# 过滤在少于3个细胞中表达的基因
+counts_matrix <- counts_matrix[, colSums(counts_matrix > 0) >= 5]
+
+dim(counts_matrix)
+```
+
+```{r}
+# stabilize
+normal_expression <- stabilize(counts_matrix)
+```
+
+```{r}
+range(normal_expression) # -1.345634  8.154000
+normal_expression[1:5, 1:5]
+counts_matrix[1:5, 1:5]
+```
+```{r}
+# match the dimension
+rows <- intersect(rownames(sample_info), colnames(counts_matrix))
+sample_info <- sample_info[rows, ]
+coords <- coords[rows, ]
+```
+
+```{r}
+# Regress out the effect of library size.
+
+resid_expression <- regress_out(
+  counts = normal_expression, # matrix of variance stabilized counts, resulting from stabilize()
+  sample_info = sample_info # df with samples as rows and at least a column with total_counts
+) # return a matrix of normalized counts
+
+resid_expression[1:5, 1:5]
+```
+
+```{r}
+# To reduce the running time, SpatialDE test is run on a subset of 1000 genes.
+# Running it on the complete dataset takes about 10 mins.
+
+# Perform SpatialDE test
+sample_resid_expression <- head(resid_expression, 100)
+
+results <- spatialDE::run(
+  x = sample_resid_expression, 
+  coordinates = coords,
+  verbose = TRUE
+)
+# g: the name of the gene
+# pval: the p-value for spatial differential expression
+# qval: Significance after correcting for multiple testing
+# l: A parameter indicating the distance scale a gene changes expression over
+
+# run() is used to perform spatial differential expression testing and returns a dataframe
+# containing the differential expression results of genes and related statistical information
+
+head(results[order(results$qval), ])
+```
+
+```{r}
+results <- readRDS(paste0(path, "RData/SpatialDE_results1.rds"))
+```
+
+```{r}
+# Classify the DE genes to interpetable DE classes
+# Apply the model search on filted DE results
+# using the threshold of 0.05 for the q-value
+de_results <- results[results$qval < 0.05, ]
+head(de_results)
+dim(de_results)
+
+ms_results <- model_search(
+  # matrix-like object of normalized counts. E.g. resulting from regress_out()
+  sample_resid_expression, 
+  coordinates = coords, 
+  de_results = de_results # dataframe resulting from run()
+)
+
+head(ms_results)
+dim(ms_results)
+```
+
+```{r}
+sp <- spatial_patterns(
+  sample_resid_expression,
+  coordinates = coords,
+  de_results = de_results,
+  qval_thresh = 0.05, # only rows in de_results with qval < qval_thresh will be kept
+  n_patterns = 4L, # the number of spatial patterns (4)
+  length = 1.5 # the characteristic length scale of the clusters
+)
+```
+
+
+
+
+
+
+
+
+

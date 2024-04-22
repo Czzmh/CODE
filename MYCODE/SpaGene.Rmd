@@ -16,6 +16,7 @@ library(dplyr)
 library(ggplot2)
 library(SpaGene)
 library(pheatmap)
+library(gridExtra)
 ```
 
 ```{r}
@@ -25,10 +26,12 @@ path <- "D:/Desktop/MGI/CODE/"
 data <- LoadH5Seurat(paste0(path, "Data/SS200000116BR_E6.bin200.h5seurat"))
 head(data@meta.data, 5)
 ```
+
 ```{r}
 coords <- data@meta.data %>% select(x, y)
 coords
 ```
+
 ```{r}
 counts = GetAssayData(data)
 counts
@@ -64,22 +67,46 @@ pattern_plots[[1]]
 ```
 
 ```{r}
-top5<-apply(pattern$genepattern,2,function(x){names(x)[order(x,decreasing=T)][1:5]})
-
+top5<-apply(pattern$genepattern, 2, function(x){names(x)[order(x,decreasing=T)][1:5]})
+top5
+```
+```{r}
 pheatmap(pattern$genepattern[rownames(pattern$genepattern)%in%top5,])
 ```
 
 ```{r}
-human_LR <- read.table(paste0(path, "Data/human_lr_pair.txt"), header = TRUE, sep = "\t")
-head(human_LR)
+top5_in_pattern1 <- top5[, "Pattern1"]
+top5_in_pattern1
 ```
 
 ```{r}
-data_lr <- SpaGene_LR(counts, coords, LRpair = human_LR) 
+top5_df <- counts[top5_in_pattern1, ] %>% as.matrix() %>% t() %>% as.data.frame() 
+top5_df
+```
+```{r}
+top5_df <- cbind(top5_df, coords)
+top5_df
 ```
 
 ```{r}
-head(data_lr[order(data_lr$adj),])
+plots <- lapply(1:5, function(i) {
+
+  cell_data <- top5_df[, c(i, 6, 7)]
+  colnames(cell_data) <- c("Expression", "X", "Y")
+  
+  p <- ggplot(cell_data, aes(x = X, y = Y, color = Expression)) +
+    geom_point(size = 1) +
+    scale_color_gradient(low = "white", high = "red", limits = range(top5_df[,1:5])) +  
+    labs(title = colnames(top5_df)[i])  
+  
+  return(p)
+})
+
+plots[[1]]
+plots[[2]]
+plots[[3]]
+plots[[4]]
+plots[[5]]
 ```
 
 
