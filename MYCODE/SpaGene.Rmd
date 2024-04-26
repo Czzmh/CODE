@@ -14,7 +14,7 @@ library(spacexr)
 library(Matrix)
 library(dplyr)
 library(ggplot2)
-library(SpaGene)
+library(SpaGene)  
 library(pheatmap)
 library(gridExtra)
 ```

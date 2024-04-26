@@ -80,10 +80,17 @@ def plot_one_tumor_topic(ax, tumor_idx, topic_weights, patient_dfs):
     immune_coords = cell_coords[cell_coords.is_immune]
     cell_indices = topic_weights.index.map(lambda x: x[1])
     coords = patient_dfs[tumor_idx].loc[cell_indices]
-    ax.scatter(immune_coords['y'], -immune_coords['x'],
+
+    # ax.scatter(immune_coords['y'], -immune_coords['x'],
+    #            s=5, c='k', label='Immune', alpha=0.1)
+    # ax.scatter(coords['y'], -coords['x'], s=2, c=topic_weights, cmap="Reds",
+    #            label='Topic weight')
+
+    ax.scatter(immune_coords['x'], immune_coords['y'],
                s=5, c='k', label='Immune', alpha=0.1)
-    ax.scatter(coords['y'], -coords['x'], s=2, c=topic_weights, cmap="Reds",
+    ax.scatter(coords['x'], coords['y'], s=2, c=topic_weights, cmap="Reds",
                label='Topic weight')
+    
     ax.set_title("Tumor %d" % tumor_idx)
     ax.axes.get_yaxis().set_visible(False)
     ax.axes.get_xaxis().set_visible(False)
@@ -96,10 +103,16 @@ def plot_one_tumor_all_topics(ax, tumor_idx, topic_weights, patient_dfs):
     immune_coords = cell_coords[cell_coords.is_immune]
     cell_indices = topic_weights.index.map(lambda x: x[1])
     coords = patient_dfs[tumor_idx].loc[cell_indices]
-    ax.scatter(immune_coords['y'], -immune_coords['x'],
+    # ax.scatter(immune_coords['y'], -immune_coords['x'],
+    #            s=5, c='k', label='Immune', alpha=0.1)
+    # ax.scatter(coords['y'], -coords['x'], s=2,
+    #            c=colors[np.argmax(np.array(topic_weights), axis=1), :])
+
+    ax.scatter(immune_coords['x'], immune_coords['y'],
                s=5, c='k', label='Immune', alpha=0.1)
-    ax.scatter(coords['y'], -coords['x'], s=2,
+    ax.scatter(coords['x'], coords['y'], s=2,
                c=colors[np.argmax(np.array(topic_weights), axis=1), :])
+    
     ax.set_title("Tumor %d" % tumor_idx)
     ax.axes.get_yaxis().set_visible(False)
     ax.axes.get_xaxis().set_visible(False)

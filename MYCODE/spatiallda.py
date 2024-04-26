@@ -58,10 +58,11 @@ merged_data['is_tumor'] = np.where(merged_data['final_type'] == 'Tumor-Cholang',
 
 # is_immune
 immune_cell_types = {'B cell': True, 'T-NK': True, 'Macrophage': True}
-merged_data['is_immune'] = np.where(merged_data['final_type'].isin(immune_cell_types.keys()), True, False)
+merged_data['is_immune'] = np.where(merged_data['final_type'].isin(immune_cell_types.keys()), 
+                                    True, False)
 
 # tumor data
-tumor_data = merged_data[merged_data['is_tumor'] == True]
+tumor_data = merged_data[(merged_data['is_tumor'] == True)|(merged_data['is_immune'] == True)]
 tumor_data = tumor_data[(tumor_data['x'] > 5900) & (tumor_data['y'] > 5500) 
                         & (tumor_data['x'] < 25900) & (tumor_data['y'] < 25700)] # filter
 
@@ -107,24 +108,27 @@ _plot_fn = make_plot_fn(train_difference_matrices)
 
 plot_samples_in_a_row(train_features, _plot_fn, patient_dict) #, tumor_set=[3])
 
-# train lda model
-spatial_lda_model = spatial_lda.model.train(train_features, 
-                                            train_difference_matrices, 
-                                            n_topics=N_TOPICS, 
-                                            difference_penalty=DIFFERENCE_PENALTY, 
-                                            verbosity=1,
-                                            n_parallel_processes=N_PARALLEL_PROCESSES,
-                                            n_iters=3,
-                                            admm_rho=0.1,
-                                            primal_dual_mu=2)
+# # train lda model
+# spatial_lda_model = spatial_lda.model.train(train_features, 
+#                                             train_difference_matrices, 
+#                                             n_topics=N_TOPICS, 
+#                                             difference_penalty=DIFFERENCE_PENALTY, 
+#                                             verbosity=1,
+#                                             n_parallel_processes=N_PARALLEL_PROCESSES,
+#                                             n_iters=3,
+#                                             admm_rho=0.1,
+#                                             primal_dual_mu=2)
 
-# save model
-with open(data_path + "Model/spatial_lda_tmp.pkl", 'wb') as f:
-    pickle.dump(spatial_lda_model, f)
+# # save model
+# with open(data_path + "Model/spatial_lda_tmp.pkl", 'wb') as f:
+#     pickle.dump(spatial_lda_model, f)
 
 # load model
-with open(data_path + "Model/spatial_lda.pkl", 'rb') as f:
+with open(data_path + "Model/spatial_lda_tumor_immune.pkl", 'rb') as f:
     complete_lda = pickle.load(f)
 
 plot_samples_in_a_row(complete_lda.topic_weights, plot_one_tumor_all_topics, patient_dict)
 
+for t in range(N_TOPICS):
+  plot_samples_in_a_row(complete_lda.topic_weights.iloc[:, t], 
+                        plot_one_tumor_topic, patient_dict, tumor_set=None)
