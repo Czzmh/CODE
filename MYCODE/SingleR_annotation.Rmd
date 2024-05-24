@@ -305,7 +305,7 @@ print(plot)
 
 ```
 
-cell type with their spatial location (with to find some patterns in Tumor)
+cell type with their spatial location (wish to find some patterns in Tumor)
 
 the results in Cloud in much better (do not know why)
 

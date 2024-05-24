@@ -1,0 +1,66 @@
+---
+title: "SpaGene"
+author: "Jin Huhao"
+date: "2024-05-23"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(Seurat)
+library(SeuratDisk)
+library(spacexr)
+library(Matrix)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+path <- "D:/Desktop/MGI/CODE/"
+
+# Data
+data <- LoadH5Seurat(paste0(path, "Data/SS200000116BR_E1.bin50.h5seurat"))
+head(data@meta.data, 5)
+```
+
+
+```{r}
+coords <- data@meta.data %>% select(x, y)
+counts = GetAssayData(data)
+```
+
+```{r}
+names <- counts@Dimnames[[1]]
+```
+
+```{r}
+HBV_genes <- names[grep("HBV", names)]
+print(HBV_genes)
+```
+
+```{r}
+HBV_counts <- colSums(counts[HBV_genes, ])
+coords$HBV_expression <- HBV_counts
+
+head(coords)
+```
+
+```{r}
+coords_filtered <- coords %>% filter(HBV_expression>1)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

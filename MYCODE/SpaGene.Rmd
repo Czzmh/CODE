@@ -146,11 +146,16 @@ plots[[4]]
 plots[[5]]
 ```
 
+```{r}
+gene_pattern <- as.data.frame(pattern$genepattern)
+gene_pattern
+```
 
-
-
-
-
-
-
+```{r}
+pattern1_sorted <- gene_pattern[order(-gene_pattern$Pattern1), "Pattern1", drop=FALSE]
+pattern1_sorted
+```
+```{r}
+gene_pattern["SPP1", ]
+```
 
